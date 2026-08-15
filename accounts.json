@@ -1,0 +1,28 @@
+{
+  "accounts": [
+    {
+      "username": "livermoerR",
+      "display_name": "livermoerR"
+    },
+    {
+      "username": "tuolajiiii",
+      "display_name": "tuolajiiii"
+    },
+    {
+      "username": "XiaoM17",
+      "display_name": "XiaoM17"
+    },
+    {
+      "username": "aleabitoreddit",
+      "display_name": "aleabitoreddit"
+    }
+  ],
+  "nitter_instances": [
+    "https://xcancel.com",
+    "https://nitter.net",
+    "https://nitter.poast.org"
+  ],
+  "rsshub_instances": [
+    "https://rsshub.app"
+  ]
+}
