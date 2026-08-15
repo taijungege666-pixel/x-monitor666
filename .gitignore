@@ -1,0 +1,9 @@
+# 本地生成文件（勿提交）
+sent.json
+analyzed.json
+reports/
+__pycache__/
+*.pyc
+
+# WorkBuddy 项目数据（勿提交）
+.workbuddy/
