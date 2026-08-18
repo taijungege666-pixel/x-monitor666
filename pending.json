@@ -809,6 +809,96 @@
       "link": "https://x.com/aleabitoreddit/status/2089547564249219163",
       "published": "Tue, 18 Aug 2026 02:58:55 GMT",
       "created_at": "2026-08-18 03:41:08"
+    },
+    {
+      "id": "2089598138126610635",
+      "username": "livermoerR",
+      "display_name": "livermoerR",
+      "content": "澜起科技：CXL控制器产业分工重构，专业厂商价值量有望提升 #美股Marvell $MRVL 收涨超5%，AI互联与内存基础设施关注度提升 8月17日，Marvell收涨5.54%，随着AI集群规模持续提升，互联与内存基础设施的配置需求同步上升，CXL内存扩展产业链有望获得更多市场关注。 存储原厂调整自研策略，CXL控制器外购趋势增强 据ZDNet Korea报道，三星、SK海力士、美光 $MU 已缩减或搁置CXL扩展控制器商业化计划：美光转向第三方方案，SK海力士据报道停止相关自研商业化，三星则将自研控制器保留在前瞻研发阶段，对外产品倾向采用专业Fabless方案。若这一产业分工延续，存储原…",
+      "link": "https://x.com/livermoerR/status/2089598138126610635",
+      "published": "Tue, 18 Aug 2026 06:19:53 GMT",
+      "created_at": "2026-08-18 06:37:50"
+    },
+    {
+      "id": "2089598229570826329",
+      "username": "livermoerR",
+      "display_name": "livermoerR",
+      "content": "迅捷兴：ABF膜持续紧缺，RCC在载板领域预计国产替代加速 🥇# ABF供给紧缺催生替代需求-RCC产业链配套成型 当前高端ABF膜长期供给紧张，封装载板领域国产替代需求明确。上游诺沛芯材逆周期开展研发，在载板行业稼动率偏低、mSAP工艺尚未形成大规模放量阶段，便提前多年布局RCC树脂替代路线，目前相关技术已经完成样品开发，并实现小批量板材试制，技术落地成熟。 产业链传导清晰：诺沛芯材（RCC材料）→ 迅捷兴（PCB配套制造），公司作为核心下游配套厂商，积极对接头部客户、开拓高端载板业务。行业缺货背景下，国内厂商导入RCC新工艺的节奏将持续提速。 🥈# RCC性能全面优于ABF-为下一代高阶树…",
+      "link": "https://x.com/livermoerR/status/2089598229570826329",
+      "published": "Tue, 18 Aug 2026 06:20:15 GMT",
+      "created_at": "2026-08-18 06:37:50"
+    },
+    {
+      "id": "2089598549403279470",
+      "username": "livermoerR",
+      "display_name": "livermoerR",
+      "content": "可以重视光无源的低位标的。很多消电光的标的基本此前已经把光通的溢价跌完了（小票30-40x，大票不到30x），目前股价也基本筑底，位置也比较低，从nv官宣cpo量产开始，后面8.26 NV发业绩，9.9光博会，10.12OCP相关的催化也比较多，CPO NPO OCS等光互联新技术方向和无源一直相关度很高，价值量有通胀格局也比模块更好。 1️⃣小无源 ①蓝特光学：今年40x，明年28x，明年透镜就有6亿以上，加上CPO给大立光mla小几个亿收入。 ②水晶光电：康宁 $GLW 玻璃桥概念+HDD光存储，今年28x，明年20x出头。 ③中润光学：今年40x，明年30x，目前pbs棱镜等间接交xc增…",
+      "link": "https://x.com/livermoerR/status/2089598549403279470",
+      "published": "Tue, 18 Aug 2026 06:21:31 GMT",
+      "created_at": "2026-08-18 06:37:50"
+    },
+    {
+      "id": "2089598653694726233",
+      "username": "livermoerR",
+      "display_name": "livermoerR",
+      "content": "🔥受益NPO/CPO带来的通胀核心标的——杰普特、联讯仪器 1️⃣杰普特： 🍁#英伟达 $NVDA 全面量产CPO，AAOI、LITE对NPO、CPO乐观，这时候最应该关注通胀无源器件！ FAU：适配NPO、CPO的dFAU相对1.6T光模块的FAU价值量膨胀10倍以上——JPT已经成为 Coherent $COHR dFAU的供应商，今年亿元订单，明年预计10亿量级。 MPO：目前来看，NPO/CPO可能单通道速率不再激进，结果是通道数量提升，带来的是MPO芯数的提升，MPO通胀——JPT配套北美客户VIA，今年1.5e美金，明年4.5亿美金以上，还有上修空间。 2️⃣联讯仪器：NPO/CP…",
+      "link": "https://x.com/livermoerR/status/2089598653694726233",
+      "published": "Tue, 18 Aug 2026 06:21:56 GMT",
+      "created_at": "2026-08-18 06:37:50"
+    },
+    {
+      "id": "2089598726096756836",
+      "username": "livermoerR",
+      "display_name": "livermoerR",
+      "content": "宏昌电子 逻辑再文字整理如下，供老师们参考 1、RCC材料是什么？ 超薄树脂+铜箔的组合（无玻布） 2、以前只用在很高端的消费电子领域？ 是的，还是工艺不成熟……RCC材料太脆了，容易崩 3、RCC材料的优点？ 无玻布，所以L/S可以做更细、层数更少，降成本； 无玻布，降低损耗； 无玻布，缓解缺玻布的供应链短缺问题； 4、即使商用，应用领域？ 光模块！对降低损耗的诉求非常强。 5、RCC材料目前的阶段？ 样品做好HDI板，已送往XC验证。 如果验证顺利，则小批量送样、小批量送样两三轮 6、怎么看这个方案？ 从技术的第一性原理出发，非常有优势！第一步，核心看9月初在xc的样品验证情况。 7、供应…",
+      "link": "https://x.com/livermoerR/status/2089598726096756836",
+      "published": "Tue, 18 Aug 2026 06:22:13 GMT",
+      "created_at": "2026-08-18 06:37:50"
+    },
+    {
+      "id": "2089593401599725929",
+      "username": "XiaoM17",
+      "display_name": "XiaoM17",
+      "content": "台式机 笔记本 采购国产化",
+      "link": "https://x.com/XiaoM17/status/2089593401599725929",
+      "published": "Tue, 18 Aug 2026 06:01:04 GMT",
+      "created_at": "2026-08-18 06:37:54"
+    },
+    {
+      "id": "2089593955482734758",
+      "username": "XiaoM17",
+      "display_name": "XiaoM17",
+      "content": "R to @XiaoM17: 刚图片少发一张。 因为要先发群里，网站 图片突然多的时候比较忙",
+      "link": "https://x.com/XiaoM17/status/2089593955482734758",
+      "published": "Tue, 18 Aug 2026 06:03:16 GMT",
+      "created_at": "2026-08-18 06:37:54"
+    },
+    {
+      "id": "2089593683880587506",
+      "username": "XiaoM17",
+      "display_name": "XiaoM17",
+      "content": "国产操作系统概念股来了 中国要求部分政府机构提前卸载一款专为政府定制的Windows 10系统（神州网信政府版）。 这是微软和中国电科合资公司开发的，原本计划2027年2月才停支持，现在提前数月。 目的是进一步减少对美国技术的依赖，转向国产系统。 微软回应称没有已知安全问题，产品仍会继续更新。",
+      "link": "https://x.com/XiaoM17/status/2089593683880587506",
+      "published": "Tue, 18 Aug 2026 06:02:11 GMT",
+      "created_at": "2026-08-18 06:37:54"
+    },
+    {
+      "id": "2089599789772189705",
+      "username": "XiaoM17",
+      "display_name": "XiaoM17",
+      "content": "下午刚进群的兄弟， 看到这消息， 上车常山北明 ， 直接回几个本 😀 （保护隐私，敏感信息没截图） 我们会不断上线新功能 更好的服务好兄弟们！ 网站昨天刚上线的每日复盘 今天继续上线新功能！",
+      "link": "https://x.com/XiaoM17/status/2089599789772189705",
+      "published": "Tue, 18 Aug 2026 06:26:27 GMT",
+      "created_at": "2026-08-18 06:37:54"
+    },
+    {
+      "id": "2089602325665235088",
+      "username": "XiaoM17",
+      "display_name": "XiaoM17",
+      "content": "京东方的小作文 刚一直在忙群里的事，这个发晚了 消息也没咋发酵 😅😅",
+      "link": "https://x.com/XiaoM17/status/2089602325665235088",
+      "published": "Tue, 18 Aug 2026 06:36:32 GMT",
+      "created_at": "2026-08-18 06:37:54"
     }
   ]
 }
