@@ -67,6 +67,65 @@ def save_json(path: str, data) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def fetch_x_syndication(username: str, timeout: int = REQUEST_TIMEOUT):
+    """X 官方 syndication timeline API（无认证）。返回最近推文列表；失败抛异常。
+
+    接口：https://cdn.syndication.twimg.com/timeline/profile?screen_name={user}&t={ts}
+    返回 JSON：{"timeline":{"entries":[{"id","content","tweet":{"full_text","created_at"}...}]}}
+    """
+    ts = int(time.time())
+    url = f"https://cdn.syndication.twimg.com/timeline/profile?screen_name={username}&t={ts}"
+    headers = {"User-Agent": USER_AGENT, "Accept": "application/json,text/html,*/*"}
+    resp = requests.get(url, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    text = resp.text
+
+    tweets = []
+    # 优先 JSON 解析
+    try:
+        data = json.loads(text)
+        entries = data.get("timeline", {}).get("entries", [])
+        for e in entries:
+            tw = e.get("tweet") or {}
+            tid = e.get("id") or tw.get("id_str") or ""
+            content = tw.get("full_text") or tw.get("text") or ""
+            published = tw.get("created_at") or ""
+            if not content or not tid:
+                continue
+            tweets.append({
+                "id": str(tid),
+                "link": f"https://x.com/{username}/status/{tid}",
+                "content": clean_text(content),
+                "published": published,
+            })
+            if len(tweets) >= MAX_ENTRIES_PER_ACCOUNT:
+                break
+    except (json.JSONDecodeError, AttributeError, TypeError):
+        # 兜底：HTML 嵌入版（老格式）
+        blocks = re.split(r'class="timeline-item[^"]*"', text)[1:]
+        for block in blocks:
+            m = re.search(r'/status/(\d+)', block)
+            if not m:
+                continue
+            tid = m.group(1)
+            cm = re.search(r'class="tweet-content[^"]*"[^>]*>(.*?)</div>', block, re.S)
+            content = clean_text(cm.group(1)) if cm else ""
+            if not content:
+                continue
+            tweets.append({
+                "id": tid,
+                "link": f"https://x.com/{username}/status/{tid}",
+                "content": content,
+                "published": "",
+            })
+            if len(tweets) >= MAX_ENTRIES_PER_ACCOUNT:
+                break
+
+    if not tweets:
+        raise ValueError("syndication 无有效推文")
+    return tweets
+
+
 def fetch_feed(feed_url: str, timeout: int = REQUEST_TIMEOUT):
     """抓取并解析 RSS feed，返回 feedparser 对象；失败抛异常"""
     headers = {
@@ -200,6 +259,17 @@ def fetch_recent_tweets(username: str, config: dict):
     nitter_instances = config.get("nitter_instances", [])
     rsshub_instances = config.get("rsshub_instances", [])
     source_status = {}
+
+    # 策略0：X 官方 syndication API（无认证，最稳定）
+    try:
+        log(f"  [X官方] 尝试 syndication API")
+        tweets = fetch_x_syndication(username)
+        log(f"    [X官方] 抓到 {len(tweets)} 条，最新 id={tweets[0]['id']}")
+        source_status["x-syndication"] = f"OK:{len(tweets)}条"
+        return tweets, source_status
+    except Exception as e:
+        log(f"    [X官方] 失败: {e}")
+        source_status["x-syndication"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
 
     # 策略1：Nitter HTML 页面（多数实例禁用 RSS 但页面仍可访问）
     html_urls = get_nitter_html_urls(username, nitter_instances)
