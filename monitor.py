@@ -105,30 +105,65 @@ def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
     sess = requests.Session()
     sess.headers.update({"User-Agent": USER_AGENT, "Authorization": f"Bearer {BEARER}"})
 
-    # 方法A: v2 API 按用户名取推文（Bearer 若带 scope 即可用）
+    # 方法B: GraphQL UserTweets（guest token，twitter-scraper 常用方案）
     try:
-        url = f"https://api.twitter.com/2/users/by/username/{username}?user.fields=id"
-        r = sess.get(url, timeout=timeout)
-        if r.status_code == 200:
-            uid = r.json().get("data", {}).get("id")
-            if uid:
-                url2 = (f"https://api.twitter.com/2/users/{uid}/tweets?max_results=5"
-                        f"&tweet.fields=created_at,text")
-                r2 = sess.get(url2, timeout=timeout)
-                if r2.status_code == 200:
-                    tweets = []
-                    for tw in r2.json().get("data", []):
-                        tweets.append({
-                            "id": str(tw.get("id", "")),
-                            "link": f"https://x.com/{username}/status/{tw.get('id')}",
-                            "content": clean_text(tw.get("text", "")),
-                            "published": tw.get("created_at", ""),
-                        })
-                    if tweets:
-                        return tweets
-        raise ValueError(f"v2 API 不可用 HTTP={r.status_code}")
+        # 1) 激活 guest token
+        r = sess.post("https://api.twitter.com/1.1/guest/activate.json", timeout=timeout)
+        if r.status_code != 200:
+            raise ValueError(f"guest activate HTTP={r.status_code}")
+        gt = r.json().get("guest_token", "")
+        if not gt:
+            raise ValueError("无 guest_token")
+
+        # 2) 查用户 rest_id
+        # 用 UserByScreenName GraphQL 查询（queryId 公开 web 端，若变会 400/404）
+        user_query_id = "7mjDHw4W8W6iK5pU2wHcAA"  # UserByScreenName（可能随版本变化）
+        var = json.dumps({"screen_name": username, "withSafetyModeUserFields": True})
+        h2 = {"Authorization": f"Bearer {BEARER}", "x-guest-token": gt, "Content-Type": "application/json"}
+        url_u = f"https://twitter.com/i/api/graphql/{user_query_id}/UserByScreenName?variables={var}"
+        ru = sess.get(url_u, headers=h2, timeout=timeout)
+        if ru.status_code != 200:
+            raise ValueError(f"UserByScreenName HTTP={ru.status_code}")
+        uid = ru.json()["data"]["user"]["result"]["rest_id"]
+
+        # 3) 拉取用户推文
+        tweets_query_id = "XG2SbiMmk0S1yYqY0n0yHw"  # UserTweets（随版本变化）
+        var2 = json.dumps({
+            "userId": uid, "count": MAX_ENTRIES_PER_ACCOUNT,
+            "includePromotedContent": True, "withQuickPromoteEligibilityTweetFields": True,
+            "withVoice": True, "withV2Timeline": True,
+        })
+        url_t = f"https://twitter.com/i/api/graphql/{tweets_query_id}/UserTweets?variables={var2}"
+        rt = sess.get(url_t, headers=h2, timeout=timeout)
+        if rt.status_code != 200:
+            raise ValueError(f"UserTweets HTTP={rt.status_code}")
+        data = rt.json()
+        tweets = []
+        instructions = data["data"]["user"]["result"]["timeline_v2"]["timeline"]["instructions"]
+        for inst in instructions:
+            if inst.get("type") != "TimelineAddEntries":
+                continue
+            for entry in inst.get("entries", []):
+                res = entry.get("content", {}).get("itemContent", {}).get("tweet_results", {}).get("result", {})
+                legacy = res.get("legacy", {})
+                tid = legacy.get("id_str") or res.get("rest_id") or ""
+                content = legacy.get("full_text") or ""
+                published = legacy.get("created_at") or ""
+                if not tid or not content:
+                    continue
+                tweets.append({
+                    "id": str(tid),
+                    "link": f"https://x.com/{username}/status/{tid}",
+                    "content": clean_text(content),
+                    "published": published,
+                })
+                if len(tweets) >= MAX_ENTRIES_PER_ACCOUNT:
+                    break
+        if tweets:
+            return tweets
+        raise ValueError("GraphQL 无推文")
     except Exception as e:
-        raise ValueError(f"v2 API 失败: {type(e).__name__}:{str(e)[:60]}")
+        raise ValueError(f"GraphQL 失败: {type(e).__name__}:{str(e)[:80]}")
 
 
 def fetch_x_syndication(username: str, timeout: int = REQUEST_TIMEOUT):
