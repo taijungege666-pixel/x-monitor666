@@ -350,7 +350,7 @@ def get_rsshub_urls(username: str, instances: list) -> list:
 
 
 def fetch_recent_tweets(username: str, config: dict):
-    """尝试多策略抓取：Nitter HTML（v2 首选）→ Nitter RSS → RSSHub。
+    """尝试多策略抓取：X官方API → r.jina.ai → Nitter HTML → Nitter RSS → RSSHub。
 
     返回 (tweets, source_status)：
       tweets：最新若干条推文（按发布时间从新到旧），全部失败为 []
@@ -359,6 +359,15 @@ def fetch_recent_tweets(username: str, config: dict):
     nitter_instances = config.get("nitter_instances", [])
     rsshub_instances = config.get("rsshub_instances", [])
     source_status = {}
+
+    # 策略0d：直连 nitter.net 首页 HTML 原始抓取（诊断用，先看返回什么）
+    try:
+        url = "https://nitter.net/" + username
+        r = requests.get(url, headers={"User-Agent": USER_AGENT}, timeout=REQUEST_TIMEOUT)
+        snippet = re.sub(r"\s+", " ", r.text)[:200]
+        source_status["nitter.net/direct"] = f"HTTP={r.status_code} len={len(r.text)} 片段:{snippet}"
+    except Exception as e:
+        source_status["nitter.net/direct"] = f"FAIL:{type(e).__name__}:{str(e)[:60]}"
 
     # 策略0a：X 官方 v2 API 直连（guest token / 公开 Bearer）
     try:
