@@ -84,6 +84,65 @@ def fetch_feed(feed_url: str, timeout: int = REQUEST_TIMEOUT):
     return parsed
 
 
+def fetch_nitter_html(username: str, instance: str, timeout: int = REQUEST_TIMEOUT):
+    """抓取 Nitter 用户主页 HTML 并解析推文（v2：RSS 端点被大量禁用，改抓 HTML 页面）。
+
+    Nitter 页面结构（多版本兼容）：
+      <div class="timeline-item" ...>
+        <div class="tweet-content ...">推文内容</div>
+        <a href="/{user}/status/{id}" title="ISO时间">...
+    返回 tweets 列表；失败抛异常。
+    """
+    headers = {
+        "User-Agent": USER_AGENT,
+        "Accept": "text/html,application/xhtml+xml,*/*",
+        "Accept-Language": "en-US,en;q=0.9",
+    }
+    url = f"{instance.rstrip('/')}/{username}"
+    resp = requests.get(url, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    page = resp.text
+
+    # 校验页面是否为 Nitter（含 timeline-item 或至少推文链接）
+    has_timeline = "timeline-item" in page or f"/status/" in page
+    if not has_timeline:
+        raise ValueError(f"非 Nitter 页面（无 timeline-item），CT={resp.headers.get('Content-Type','')}")
+
+    tweets = []
+    # 按 timeline-item 切块解析（兼容不同缩进）
+    blocks = re.split(r'class="timeline-item[^"]*"', page)[1:]
+    for block in blocks:
+        m = re.search(r'/(?:@?%s)/status/(\d+)' % re.escape(username), block)
+        if not m:
+            m = re.search(r'/status/(\d+)', block)
+        if not m:
+            continue
+        tweet_id = m.group(1)
+
+        # 推文内容：tweet-content 标签内
+        cm = re.search(r'class="tweet-content[^"]*"[^>]*>(.*?)</div>', block, re.S)
+        content = clean_text(cm.group(1)) if cm else ""
+        if not content:
+            continue
+
+        # 时间：tweet-date 下 a 标签 title 属性（ISO 格式）
+        dm = re.search(r'class="tweet-date"[^>]*>.*?title="([^"]+)"', block, re.S)
+        published = dm.group(1) if dm else ""
+
+        tweets.append({
+            "id": tweet_id,
+            "link": f"https://x.com/{username}/status/{tweet_id}",
+            "content": content,
+            "published": published,
+        })
+        if len(tweets) >= MAX_ENTRIES_PER_ACCOUNT:
+            break
+
+    if not tweets:
+        raise ValueError("页面无有效推文（可能被限流/需登录）")
+    return tweets
+
+
 def extract_tweet_id(entry_url: str) -> str:
     """从推文链接中提取 status id"""
     m = re.search(r"/status/(\d+)", entry_url)
@@ -118,7 +177,11 @@ def entry_to_tweet(entry) -> dict:
 
 # ---------- 多源抓取 ----------
 
-def get_nitter_urls(username: str, instances: list) -> list:
+def get_nitter_html_urls(username: str, instances: list) -> list:
+    return [f"{inst.rstrip('/')}/{username}" for inst in instances if inst]
+
+
+def get_nitter_rss_urls(username: str, instances: list) -> list:
     return [f"{inst.rstrip('/')}/{username}/rss" for inst in instances if inst]
 
 
@@ -127,35 +190,71 @@ def get_rsshub_urls(username: str, instances: list) -> list:
 
 
 def fetch_recent_tweets(username: str, config: dict):
-    """尝试所有 RSS 源，返回 (tweets, source_status)。
-    tweets：最新若干条推文（按发布时间从新到旧），全部失败为 []
-    source_status：dict {url: "OK:3条" 或 "FAIL:错误信息"}，供诊断落盘
+    """尝试多策略抓取：Nitter HTML（v2 首选）→ Nitter RSS → RSSHub。
+
+    返回 (tweets, source_status)：
+      tweets：最新若干条推文（按发布时间从新到旧），全部失败为 []
+      source_status：dict {host: "OK:3条" 或 "FAIL:错误信息"}，供诊断落盘
     """
     nitter_instances = config.get("nitter_instances", [])
     rsshub_instances = config.get("rsshub_instances", [])
-    feed_urls = get_nitter_urls(username, nitter_instances) + get_rsshub_urls(username, rsshub_instances)
     source_status = {}
 
-    for url in feed_urls:
+    # 策略1：Nitter HTML 页面（多数实例禁用 RSS 但页面仍可访问）
+    html_urls = get_nitter_html_urls(username, nitter_instances)
+    for url in html_urls:
         host = url.split("/")[2] if "//" in url else url
         try:
-            log(f"  尝试源: {url}")
+            log(f"  [HTML] 尝试源: {url}")
+            tweets = fetch_nitter_html(username, url)
+            log(f"    [HTML] 抓到 {len(tweets)} 条，最新 id={tweets[0]['id']}")
+            source_status[host + "/html"] = f"OK:{len(tweets)}条"
+            return tweets, source_status
+        except Exception as e:
+            log(f"    [HTML] 失败: {e}")
+            source_status[host + "/html"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
+
+    # 策略2：Nitter RSS 端点
+    rss_urls = get_nitter_rss_urls(username, nitter_instances)
+    for url in rss_urls:
+        host = url.split("/")[2] if "//" in url else url
+        try:
+            log(f"  [RSS] 尝试源: {url}")
             parsed = fetch_feed(url)
             if not parsed.entries:
-                log(f"    该源无内容，跳过")
-                source_status[host] = "EMPTY:无条目"
+                source_status[host + "/rss"] = "EMPTY:无条目"
                 continue
             tweets = [entry_to_tweet(e) for e in parsed.entries[:MAX_ENTRIES_PER_ACCOUNT]]
             tweets = [t for t in tweets if t["id"]]
             if tweets:
-                log(f"    抓到 {len(tweets)} 条，最新 id={tweets[0]['id']} published={tweets[0]['published']}")
-                source_status[host] = f"OK:{len(tweets)}条"
+                log(f"    [RSS] 抓到 {len(tweets)} 条，最新 id={tweets[0]['id']}")
+                source_status[host + "/rss"] = f"OK:{len(tweets)}条"
                 return tweets, source_status
-            else:
-                source_status[host] = "EMPTY:无有效id"
+            source_status[host + "/rss"] = "EMPTY:无有效id"
         except Exception as e:
-            log(f"    失败: {e}")
-            source_status[host] = f"FAIL:{type(e).__name__}:{str(e)[:60]}"
+            log(f"    [RSS] 失败: {e}")
+            source_status[host + "/rss"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
+
+    # 策略3：RSSHub 公共实例
+    for url in get_rsshub_urls(username, rsshub_instances):
+        host = url.split("/")[2] if "//" in url else url
+        try:
+            log(f"  [RSSHub] 尝试源: {url}")
+            parsed = fetch_feed(url)
+            if not parsed.entries:
+                source_status[host + "/rsshub"] = "EMPTY:无条目"
+                continue
+            tweets = [entry_to_tweet(e) for e in parsed.entries[:MAX_ENTRIES_PER_ACCOUNT]]
+            tweets = [t for t in tweets if t["id"]]
+            if tweets:
+                log(f"    [RSSHub] 抓到 {len(tweets)} 条")
+                source_status[host + "/rsshub"] = f"OK:{len(tweets)}条"
+                return tweets, source_status
+            source_status[host + "/rsshub"] = "EMPTY:无有效id"
+        except Exception as e:
+            log(f"    [RSSHub] 失败: {e}")
+            source_status[host + "/rsshub"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
+
     return [], source_status
 
 
