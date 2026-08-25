@@ -35,3 +35,21 @@ jobs:
           git add pending.json state.json
           git diff --cached --quiet || git commit -m "chore: update pending queue & state [skip ci]"
           git push
+
+      - name: Fail on consecutive fetch failures (alert)
+        # monitor.py 不再 exit 1（避免跳过 commit 步骤导致诊断无法落盘），
+        # 改为在 state.json 写 _alert 标记；这里检测到告警则让本轮 Actions 变红
+        run: |
+          python - <<'EOF'
+          import json, sys
+          try:
+              with open("state.json", encoding="utf-8") as f:
+                  st = json.load(f)
+              alert = st.get("_alert", {})
+              if alert.get("active"):
+                  print("❌ " + alert.get("message", "连续抓取失败告警"))
+                  sys.exit(1)
+              print("✅ 无告警，连续失败数:", alert.get("consecutive_fail", 0))
+          except Exception as e:
+              print("跳过告警检查:", e)
+          EOF
