@@ -123,7 +123,7 @@ def fetch_x_syndication(username: str, timeout: int = REQUEST_TIMEOUT):
 
     if not tweets:
         snippet = re.sub(r"\s+", " ", text)[:150]
-        raise ValueError(f"syndication 无有效推文 响应片段: {snippet}")
+        raise ValueError(f"syndication 无有效推文 (HTTP={resp.status_code}, len={len(text)}) 片段: {snippet}")
     return tweets
 
 
