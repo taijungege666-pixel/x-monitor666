@@ -13,8 +13,11 @@ X 博主推文监控 → 待推送队列（pending.json）
 5. 新推文追加写入 pending.json（待推送队列），并更新 state.json
 6. workflow 会把 pending.json / state.json commit 回仓库
 
-注意：本脚本不直接推送消息。真正的推送由运行在本地电脑的
-qq_relay.py 完成（本地 NapCat 登录小号 → 私聊推送）。
+诊断与告警（v2 新增）：
+- 每轮把每个源的成功/失败结果写入 state.json 的 "_source_status" 键，
+  方便通过 raw.githubusercontent 直接查看各源真实可用性
+- 若连续 FAIL_THRESHOLD 轮所有博主的所有源全部失败，脚本 exit 1，
+  让 GitHub Actions 变红，避免"静默假绿"
 
 本地运行：python monitor.py（需 pip install feedparser requests）
 """
@@ -36,10 +39,11 @@ CONFIG_FILE = os.path.join(BASE_DIR, "accounts.json")
 STATE_FILE = os.path.join(BASE_DIR, "state.json")
 PENDING_FILE = os.path.join(BASE_DIR, "pending.json")
 
-REQUEST_TIMEOUT = 20  # 秒
+REQUEST_TIMEOUT = 15  # 秒（每个源单次请求超时，多源轮询避免整体太久）
 USER_AGENT = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"
 MAX_ENTRIES_PER_ACCOUNT = 5   # 每个博主最多处理前 N 条
 MAX_HANDLED_PER_ACCOUNT = 20  # state 中每个博主保留最近 N 个已处理 id
+FAIL_THRESHOLD = 3            # 连续 N 轮全源失败则 exit 1 告警
 
 
 # ---------- 工具函数 ----------
@@ -64,7 +68,7 @@ def save_json(path: str, data) -> None:
 
 
 def fetch_feed(feed_url: str, timeout: int = REQUEST_TIMEOUT):
-    """抓取并解析 RSS feed，返回 feedparser 对象"""
+    """抓取并解析 RSS feed，返回 feedparser 对象；失败抛异常"""
     headers = {
         "User-Agent": USER_AGENT,
         "Accept": "application/rss+xml, application/atom+xml, application/xml, text/xml, */*",
@@ -122,27 +126,37 @@ def get_rsshub_urls(username: str, instances: list) -> list:
     return [f"{inst.rstrip('/')}/twitter/user/{username}" for inst in instances if inst]
 
 
-def fetch_recent_tweets(username: str, config: dict) -> list:
-    """尝试所有 RSS 源，返回最新若干条推文（按发布时间从新到旧排序）。全部失败返回 []"""
+def fetch_recent_tweets(username: str, config: dict):
+    """尝试所有 RSS 源，返回 (tweets, source_status)。
+    tweets：最新若干条推文（按发布时间从新到旧），全部失败为 []
+    source_status：dict {url: "OK:3条" 或 "FAIL:错误信息"}，供诊断落盘
+    """
     nitter_instances = config.get("nitter_instances", [])
     rsshub_instances = config.get("rsshub_instances", [])
     feed_urls = get_nitter_urls(username, nitter_instances) + get_rsshub_urls(username, rsshub_instances)
+    source_status = {}
 
     for url in feed_urls:
+        host = url.split("/")[2] if "//" in url else url
         try:
             log(f"  尝试源: {url}")
             parsed = fetch_feed(url)
             if not parsed.entries:
                 log(f"    该源无内容，跳过")
+                source_status[host] = "EMPTY:无条目"
                 continue
             tweets = [entry_to_tweet(e) for e in parsed.entries[:MAX_ENTRIES_PER_ACCOUNT]]
             tweets = [t for t in tweets if t["id"]]
             if tweets:
                 log(f"    抓到 {len(tweets)} 条，最新 id={tweets[0]['id']} published={tweets[0]['published']}")
-                return tweets
+                source_status[host] = f"OK:{len(tweets)}条"
+                return tweets, source_status
+            else:
+                source_status[host] = "EMPTY:无有效id"
         except Exception as e:
             log(f"    失败: {e}")
-    return []
+            source_status[host] = f"FAIL:{type(e).__name__}:{str(e)[:60]}"
+    return [], source_status
 
 
 # ---------- 主流程 ----------
@@ -164,6 +178,8 @@ def main() -> int:
     pending_ids = {t.get("id") for t in pending_list}  # 已在队列中的 id，避免重复入队
 
     new_count = 0
+    round_sources = {}   # 本轮每个博主的源状态汇总
+    success_accounts = 0  # 本轮成功抓到推文的博主数
 
     for acc in accounts:
         username = acc.get("username", "").strip().lstrip("@")
@@ -172,10 +188,13 @@ def main() -> int:
             continue
 
         log(f"▶ 检查 @{username} ({display_name})")
-        tweets = fetch_recent_tweets(username, config)
+        tweets, source_status = fetch_recent_tweets(username, config)
+        round_sources[username] = source_status
+
         if not tweets:
             log(f"  ⚠️ {username} 所有源均失败，本轮跳过")
             continue
+        success_accounts += 1
 
         # 已处理 id 集合（兼容旧格式：字符串 → 迁移为集合）
         handled = state.get(username)
@@ -211,10 +230,38 @@ def main() -> int:
         # 保留最近 N 个已处理 id
         state[username] = list(handled)[-MAX_HANDLED_PER_ACCOUNT:]
 
+    # ---- 诊断落盘：源状态 + 连续失败计数 ----
+    now = time.strftime("%Y-%m-%d %H:%M:%S")
+    diag = state.get("_source_status", {})
+    diag[now] = round_sources
+    # 只保留最近 10 轮
+    keys = sorted(diag.keys())
+    for k in keys[:-10]:
+        diag.pop(k, None)
+    state["_source_status"] = diag
+
+    consecutive_fail = int(state.get("_consecutive_fail", 0))
+    if success_accounts == 0:
+        consecutive_fail += 1
+    else:
+        consecutive_fail = 0
+    state["_consecutive_fail"] = consecutive_fail
+    state["_last_run"] = {
+        "time": now,
+        "new_tweets": new_count,
+        "success_accounts": success_accounts,
+        "total_accounts": len(accounts),
+    }
+
     # 落盘
     save_json(STATE_FILE, state)
     save_json(PENDING_FILE, {"pending": pending_list})
-    log(f"===== 本轮完成：新增 {new_count} 条到待推送队列，队列当前共 {len(pending_list)} 条 =====")
+    log(f"===== 本轮完成：新增 {new_count} 条到待推送队列，队列当前共 {len(pending_list)} 条，成功博主 {success_accounts}/{len(accounts)} =====")
+
+    # 连续失败告警：让 Actions 变红
+    if consecutive_fail >= FAIL_THRESHOLD:
+        log(f"❌ 连续 {consecutive_fail} 轮所有博主所有源均失败！请检查 RSS 源可用性（最近状态见 state.json 的 _source_status）")
+        return 1
     return 0
 
 
