@@ -27,11 +27,19 @@
     "https://nitter.space",
     "https://lightbrd.com",
     "https://nuku.trabun.org",
-    "https://nitter.kareem.one"
+    "https://nitter.kareem.one",
+    "https://twstalker.com",
+    "https://nitter.d420.de",
+    "https://nitter.privacydev.net",
+    "https://nitter.unixfox.eu",
+    "https://nitter.it"
   ],
   "rsshub_instances": [
     "https://rsshub.app",
     "https://rsshub.rssforever.com",
-    "https://rsshub.pseudoyu.com"
+    "https://rsshub.pseudoyu.com",
+    "https://rsshub.ktachibana.party",
+    "https://hub.slarker.me",
+    "https://rsshub.2dland.cc"
   ]
 }
