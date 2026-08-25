@@ -72,5 +72,76 @@
     "2088115008827715971",
     "2089355682286092748",
     "2090374603264929981"
-  ]
+  ],
+  "_source_status": {
+    "2026-08-25 01:45:43": {
+      "livermoerR": {
+        "nitter.net": "EMPTY:无条目",
+        "xcancel.com": "FAIL:HTTPError:400 Client Error: Bad Request for url: https://rss.xcancel.c",
+        "nitter.poast.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.poast.or",
+        "nitter.tiekoetter.com": "FAIL:ValueError:返回了 HTML 页面（可能被拦截），Content-Type: text/html; charset=utf-8",
+        "nitter.catsarch.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.catsarch",
+        "nitter.privacyredirect.com": "FAIL:ConnectionError:HTTPSConnectionPool(host='nitter.privacyredirect.com', port=",
+        "nitter.space": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.space/li",
+        "lightbrd.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://lightbrd.com/li",
+        "nuku.trabun.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nuku.trabun.org",
+        "nitter.kareem.one": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.kareem.o",
+        "rsshub.app": "FAIL:HTTPError:404 Client Error: Not Found for url: https://google.com/404",
+        "rsshub.rssforever.com": "FAIL:HTTPError:503 Server Error: Service Unavailable for url: https://rsshu",
+        "rsshub.pseudoyu.com": "FAIL:ReadTimeout:HTTPSConnectionPool(host='rsshub.pseudoyu.com', port=443): R"
+      },
+      "tuolajiiii": {
+        "nitter.net": "EMPTY:无条目",
+        "xcancel.com": "FAIL:HTTPError:400 Client Error: Bad Request for url: https://rss.xcancel.c",
+        "nitter.poast.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.poast.or",
+        "nitter.tiekoetter.com": "FAIL:ValueError:返回了 HTML 页面（可能被拦截），Content-Type: text/html; charset=utf-8",
+        "nitter.catsarch.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.catsarch",
+        "nitter.privacyredirect.com": "FAIL:ConnectionError:HTTPSConnectionPool(host='nitter.privacyredirect.com', port=",
+        "nitter.space": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.space/tu",
+        "lightbrd.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://lightbrd.com/tu",
+        "nuku.trabun.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nuku.trabun.org",
+        "nitter.kareem.one": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.kareem.o",
+        "rsshub.app": "FAIL:HTTPError:404 Client Error: Not Found for url: https://google.com/404",
+        "rsshub.rssforever.com": "FAIL:HTTPError:503 Server Error: Service Unavailable for url: https://rsshu",
+        "rsshub.pseudoyu.com": "FAIL:ReadTimeout:HTTPSConnectionPool(host='rsshub.pseudoyu.com', port=443): R"
+      },
+      "XiaoM17": {
+        "nitter.net": "EMPTY:无条目",
+        "xcancel.com": "FAIL:HTTPError:400 Client Error: Bad Request for url: https://rss.xcancel.c",
+        "nitter.poast.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.poast.or",
+        "nitter.tiekoetter.com": "FAIL:ValueError:返回了 HTML 页面（可能被拦截），Content-Type: text/html; charset=utf-8",
+        "nitter.catsarch.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.catsarch",
+        "nitter.privacyredirect.com": "FAIL:ConnectionError:HTTPSConnectionPool(host='nitter.privacyredirect.com', port=",
+        "nitter.space": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.space/Xi",
+        "lightbrd.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://lightbrd.com/Xi",
+        "nuku.trabun.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nuku.trabun.org",
+        "nitter.kareem.one": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.kareem.o",
+        "rsshub.app": "FAIL:HTTPError:404 Client Error: Not Found for url: https://google.com/404",
+        "rsshub.rssforever.com": "FAIL:HTTPError:503 Server Error: Service Unavailable for url: https://rsshu",
+        "rsshub.pseudoyu.com": "FAIL:ReadTimeout:HTTPSConnectionPool(host='rsshub.pseudoyu.com', port=443): R"
+      },
+      "aleabitoreddit": {
+        "nitter.net": "EMPTY:无条目",
+        "xcancel.com": "FAIL:HTTPError:400 Client Error: Bad Request for url: https://rss.xcancel.c",
+        "nitter.poast.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.poast.or",
+        "nitter.tiekoetter.com": "FAIL:ValueError:返回了 HTML 页面（可能被拦截），Content-Type: text/html; charset=utf-8",
+        "nitter.catsarch.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.catsarch",
+        "nitter.privacyredirect.com": "FAIL:ConnectionError:HTTPSConnectionPool(host='nitter.privacyredirect.com', port=",
+        "nitter.space": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.space/al",
+        "lightbrd.com": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://lightbrd.com/al",
+        "nuku.trabun.org": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nuku.trabun.org",
+        "nitter.kareem.one": "FAIL:HTTPError:403 Client Error: Forbidden for url: https://nitter.kareem.o",
+        "rsshub.app": "FAIL:HTTPError:404 Client Error: Not Found for url: https://google.com/404",
+        "rsshub.rssforever.com": "FAIL:HTTPError:503 Server Error: Service Unavailable for url: https://rsshu",
+        "rsshub.pseudoyu.com": "FAIL:ReadTimeout:HTTPSConnectionPool(host='rsshub.pseudoyu.com', port=443): R"
+      }
+    }
+  },
+  "_consecutive_fail": 1,
+  "_last_run": {
+    "time": "2026-08-25 01:45:43",
+    "new_tweets": 0,
+    "success_accounts": 0,
+    "total_accounts": 4
+  }
 }
