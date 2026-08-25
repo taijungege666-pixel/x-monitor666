@@ -67,6 +67,40 @@ def save_json(path: str, data) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
+    """X 官方 API 直连（无登录）：guest token + GraphQL UserTweets。
+    失败抛异常。queryId 取自公开 web 端（若失效会继续尝试 v2 API）。
+    """
+    BEARER = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+    sess = requests.Session()
+    sess.headers.update({"User-Agent": USER_AGENT, "Authorization": f"Bearer {BEARER}"})
+
+    # 方法A: v2 API 按用户名取推文（Bearer 若带 scope 即可用）
+    try:
+        url = f"https://api.twitter.com/2/users/by/username/{username}?user.fields=id"
+        r = sess.get(url, timeout=timeout)
+        if r.status_code == 200:
+            uid = r.json().get("data", {}).get("id")
+            if uid:
+                url2 = (f"https://api.twitter.com/2/users/{uid}/tweets?max_results=5"
+                        f"&tweet.fields=created_at,text")
+                r2 = sess.get(url2, timeout=timeout)
+                if r2.status_code == 200:
+                    tweets = []
+                    for tw in r2.json().get("data", []):
+                        tweets.append({
+                            "id": str(tw.get("id", "")),
+                            "link": f"https://x.com/{username}/status/{tw.get('id')}",
+                            "content": clean_text(tw.get("text", "")),
+                            "published": tw.get("created_at", ""),
+                        })
+                    if tweets:
+                        return tweets
+        raise ValueError(f"v2 API 不可用 HTTP={r.status_code}")
+    except Exception as e:
+        raise ValueError(f"v2 API 失败: {type(e).__name__}:{str(e)[:60]}")
+
+
 def fetch_x_syndication(username: str, timeout: int = REQUEST_TIMEOUT):
     """X 官方 syndication timeline API（无认证）。返回最近推文列表；失败抛异常。
 
@@ -261,7 +295,18 @@ def fetch_recent_tweets(username: str, config: dict):
     rsshub_instances = config.get("rsshub_instances", [])
     source_status = {}
 
-    # 策略0：X 官方 syndication API（无认证，最稳定）
+    # 策略0a：X 官方 v2 API 直连（guest token / 公开 Bearer）
+    try:
+        log(f"  [X官方] 尝试 v2 API 直连")
+        tweets = fetch_x_guest_api(username)
+        log(f"    [X官方v2] 抓到 {len(tweets)} 条，最新 id={tweets[0]['id']}")
+        source_status["x-api-v2"] = f"OK:{len(tweets)}条"
+        return tweets, source_status
+    except Exception as e:
+        log(f"    [X官方v2] 失败: {e}")
+        source_status["x-api-v2"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
+
+    # 策略0b：X 官方 syndication API（无认证）
     try:
         log(f"  [X官方] 尝试 syndication API")
         tweets = fetch_x_syndication(username)
