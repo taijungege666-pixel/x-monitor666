@@ -106,7 +106,8 @@ def fetch_nitter_html(username: str, instance: str, timeout: int = REQUEST_TIMEO
     # 校验页面是否为 Nitter（含 timeline-item 或至少推文链接）
     has_timeline = "timeline-item" in page or f"/status/" in page
     if not has_timeline:
-        raise ValueError(f"非 Nitter 页面（无 timeline-item），CT={resp.headers.get('Content-Type','')}")
+        snippet = re.sub(r"\s+", " ", page)[:120]
+        raise ValueError(f"非Nitter页(无timeline-item) 首120字: {snippet}")
 
     tweets = []
     # 按 timeline-item 切块解析（兼容不同缩进）
