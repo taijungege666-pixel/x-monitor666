@@ -97,9 +97,46 @@ def fetch_rjina(username: str, timeout: int = REQUEST_TIMEOUT):
     return tweets
 
 
+def _get_graphql_query_ids(timeout: int = REQUEST_TIMEOUT):
+    """从 twitter.com 主页 JS 动态提取 UserByScreenName / UserTweets 的 queryId。
+    返回 dict 或抛异常。这是防止 queryId 硬编码过期的关键。
+    """
+    BEARER = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
+    sess = requests.Session()
+    sess.headers.update({"User-Agent": USER_AGENT, "Authorization": f"Bearer {BEARER}"})
+    # 1) 抓主页 HTML，找 main JS bundle
+    r = sess.get("https://twitter.com/", timeout=timeout)
+    if r.status_code != 200:
+        raise ValueError(f"主页 HTTP={r.status_code}")
+    m = re.search(r'src="(https://abs\.twimg\.com/[^"]+main\.[^"]+\.js)"', r.text)
+    if not m:
+        m = re.search(r'src="(/[^"]+main\.[^"]+\.js)"', r.text)
+    if not m:
+        raise ValueError("未找到 main.js")
+    js_url = m.group(1)
+    if js_url.startswith("/"):
+        js_url = "https://twitter.com" + js_url
+    # 2) 下载 JS，找 queryId
+    r2 = sess.get(js_url, timeout=timeout)
+    if r2.status_code != 200:
+        raise ValueError(f"JS HTTP={r2.status_code}")
+    js = r2.text
+    ids = {}
+    # 常见模式："UserByScreenName",{"id":"XXX","name":"UserByScreenName"...
+    for name in ["UserByScreenName", "UserTweets"]:
+        m2 = re.search(r'"' + name + r'",\{"id":"([A-Za-z0-9_-]+)"', js)
+        if not m2:
+            m2 = re.search(name + r'[^"]*"id":"([A-Za-z0-9_-]+)"', js)
+        if m2:
+            ids[name] = m2.group(1)
+    if len(ids) < 2:
+        raise ValueError(f"queryId 提取不全: {ids}")
+    return ids
+
+
 def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
     """X 官方 API 直连（无登录）：guest token + GraphQL UserTweets。
-    失败抛异常。queryId 取自公开 web 端（若失效会继续尝试 v2 API）。
+    失败抛异常。queryId 动态从 web 端提取。
     """
     BEARER = "AAAAAAAAAAAAAAAAAAAAANRILgAAAAAAnNwIzUejRCOuH5E6I8xnZz4puTs%3D1Zv7ttfk8LF81IUq16cHjhLTvJu4FA33AGWWjCpTnA"
     sess = requests.Session()
@@ -107,6 +144,11 @@ def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
 
     # 方法B: GraphQL UserTweets（guest token，twitter-scraper 常用方案）
     try:
+        # 0) 动态获取 queryId
+        qids = _get_graphql_query_ids(timeout=timeout)
+        user_query_id = qids["UserByScreenName"]
+        tweets_query_id = qids["UserTweets"]
+
         # 1) 激活 guest token
         r = sess.post("https://api.twitter.com/1.1/guest/activate.json", timeout=timeout)
         if r.status_code != 200:
@@ -116,8 +158,6 @@ def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
             raise ValueError("无 guest_token")
 
         # 2) 查用户 rest_id
-        # 用 UserByScreenName GraphQL 查询（queryId 公开 web 端，若变会 400/404）
-        user_query_id = "7mjDHw4W8W6iK5pU2wHcAA"  # UserByScreenName（可能随版本变化）
         var = json.dumps({"screen_name": username, "withSafetyModeUserFields": True})
         h2 = {"Authorization": f"Bearer {BEARER}", "x-guest-token": gt, "Content-Type": "application/json"}
         url_u = f"https://twitter.com/i/api/graphql/{user_query_id}/UserByScreenName?variables={var}"
@@ -127,7 +167,6 @@ def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
         uid = ru.json()["data"]["user"]["result"]["rest_id"]
 
         # 3) 拉取用户推文
-        tweets_query_id = "XG2SbiMmk0S1yYqY0n0yHw"  # UserTweets（随版本变化）
         var2 = json.dumps({
             "userId": uid, "count": MAX_ENTRIES_PER_ACCOUNT,
             "includePromotedContent": True, "withQuickPromoteEligibilityTweetFields": True,
