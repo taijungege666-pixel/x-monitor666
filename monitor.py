@@ -428,10 +428,22 @@ def main() -> int:
     save_json(PENDING_FILE, {"pending": pending_list})
     log(f"===== 本轮完成：新增 {new_count} 条到待推送队列，队列当前共 {len(pending_list)} 条，成功博主 {success_accounts}/{len(accounts)} =====")
 
-    # 连续失败告警：让 Actions 变红
+    # 连续失败告警：写入 state.json 的 _alert 标记（workflow 单独步骤检测并 fail）
+    # 注意：这里不能 exit 1，否则 workflow 的 commit 步骤被跳过、诊断无法落盘
+    state["_alert"] = {
+        "active": consecutive_fail >= FAIL_THRESHOLD,
+        "consecutive_fail": consecutive_fail,
+        "message": f"连续 {consecutive_fail} 轮所有博主所有源均失败！请检查 RSS/API 源可用性（详见 _source_status）",
+        "time": now,
+    }
+
+    # 落盘
+    save_json(STATE_FILE, state)
+    save_json(PENDING_FILE, {"pending": pending_list})
+    log(f"===== 本轮完成：新增 {new_count} 条到待推送队列，队列当前共 {len(pending_list)} 条，成功博主 {success_accounts}/{len(accounts)} =====")
+
     if consecutive_fail >= FAIL_THRESHOLD:
-        log(f"❌ 连续 {consecutive_fail} 轮所有博主所有源均失败！请检查 RSS 源可用性（最近状态见 state.json 的 _source_status）")
-        return 1
+        log(f"⚠️ 连续 {consecutive_fail} 轮所有源均失败（告警标记已写入 state.json 的 _alert）")
     return 0
 
 
