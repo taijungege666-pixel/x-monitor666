@@ -67,6 +67,36 @@ def save_json(path: str, data) -> None:
         json.dump(data, f, ensure_ascii=False, indent=2)
 
 
+def fetch_rjina(username: str, timeout: int = REQUEST_TIMEOUT):
+    """r.jina.ai 渲染代理抓取 X 用户页（海外可访问，能渲染 JS）。
+    返回推文列表；失败抛异常。r.jina.ai 免费版有速率限制，只作兜底。
+    """
+    url = f"https://r.jina.ai/https://x.com/{username}"
+    headers = {"User-Agent": USER_AGENT}
+    resp = requests.get(url, headers=headers, timeout=timeout)
+    resp.raise_for_status()
+    text = resp.text
+    if len(text) < 50 or "login" in text[:500].lower() and username not in text[:500]:
+        raise ValueError(f"jina 返回内容异常 len={len(text)}")
+
+    tweets = []
+    # r.jina.ai 输出为 markdown，推文通常以 "1. <text>" 或段落形式出现；
+    # 更可靠：按状态链接提取
+    for m in re.finditer(r'x\.com/%s/status/(\d+)' % re.escape(username), text):
+        tid = m.group(1)
+        tweets.append({
+            "id": tid,
+            "link": f"https://x.com/{username}/status/{tid}",
+            "content": "",
+            "published": "",
+        })
+        if len(tweets) >= MAX_ENTRIES_PER_ACCOUNT:
+            break
+    if not tweets:
+        raise ValueError("jina 未找到推文链接")
+    return tweets
+
+
 def fetch_x_guest_api(username: str, timeout: int = REQUEST_TIMEOUT):
     """X 官方 API 直连（无登录）：guest token + GraphQL UserTweets。
     失败抛异常。queryId 取自公开 web 端（若失效会继续尝试 v2 API）。
@@ -305,6 +335,17 @@ def fetch_recent_tweets(username: str, config: dict):
     except Exception as e:
         log(f"    [X官方v2] 失败: {e}")
         source_status["x-api-v2"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
+
+    # 策略0c：r.jina.ai 渲染代理（海外可访问）
+    try:
+        log(f"  [X官方] 尝试 r.jina.ai 代理")
+        tweets = fetch_rjina(username)
+        log(f"    [jina] 抓到 {len(tweets)} 条，最新 id={tweets[0]['id']}")
+        source_status["x-jina"] = f"OK:{len(tweets)}条"
+        return tweets, source_status
+    except Exception as e:
+        log(f"    [jina] 失败: {e}")
+        source_status["x-jina"] = f"FAIL:{type(e).__name__}:{str(e)[:50]}"
 
     # 策略0b：X 官方 syndication API（无认证）
     try:
